@@ -8,6 +8,17 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: squid-archive
+  
+  genshiro-node:
+    image: equilab/gens-node:latest
+    container_name: genshiro-node
+    ports:
+      - "30333"
+      - "9933"
+      - "9944"
+    command: ["/usr/bin/gens-node","-d","/data","--chain","/etc/gens-node.json","--execution","wasm","--wasm-execution","compiled","--rpc-cors","all","--offchain-worker","Always","--pruning", "archive", "--unsafe-rpc-external", "--ws-external"]
+    volumes:
+      - './data:/data'
 
   ingest:
     depends_on:
@@ -15,13 +26,9 @@ services:
     restart: on-failure
     image: subsquid/substrate-ingest:0
     command: [
-       "-e", "wss://kusama-rpc.polkadot.io",
-       "-c", "20", # allow up to 20 pending requests for the above endpoint (default is 5)
-
-       # add another endpoint to increase archiving speed and reliability.
-       "-e", "wss://kusama-rpc.dwellir.com",
-
-       #  "--start-block", "1000000", # uncomment to specify a non-zero start block
+       "-e", "ws://genshiro-node:9944",
+       "-c", "10", # allow up to 20 pending requests for the above endpoint (default is 5)
+       "--start-block", "4000000", # uncomment to specify a non-zero start block
        "--out", "postgres://postgres:postgres@db:5432/squid-archive"
     ]
 
